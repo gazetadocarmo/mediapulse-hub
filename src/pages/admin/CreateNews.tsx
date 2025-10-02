@@ -9,8 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, ArrowLeft, Upload, X } from "lucide-react";
-import { Navbar } from "@/components/Navbar";
 import { z } from "zod";
+import { Navbar } from "@/components/Navbar";
 
 const newsSchema = z.object({
   title: z.string().trim().min(3, "Título deve ter no mínimo 3 caracteres").max(200, "Título muito longo"),
