@@ -12,6 +12,8 @@ import About from "./pages/About";
 import Contact from "./pages/Contact";
 import Login from "./pages/admin/Login";
 import Dashboard from "./pages/admin/Dashboard";
+import CreateNews from "./pages/admin/CreateNews";
+import EditNews from "./pages/admin/EditNews";
 
 const queryClient = new QueryClient();
 
@@ -30,6 +32,8 @@ const App = () => (
           <Route path="/contato" element={<Contact />} />
           <Route path="/admin/login" element={<Login />} />
           <Route path="/admin/dashboard" element={<Dashboard />} />
+          <Route path="/admin/criar-noticia" element={<CreateNews />} />
+          <Route path="/admin/editar-noticia/:id" element={<EditNews />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
