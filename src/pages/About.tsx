@@ -30,7 +30,7 @@ const About = () => {
           
           <div className="prose prose-lg max-w-none mb-12">
             <p className="text-lg text-muted-foreground leading-relaxed">
-              O Jornal Digital é um portal de notícias comprometido em trazer informação de qualidade, 
+              A GAZETA DO CARMO é um portal de notícias comprometido em trazer informação de qualidade, 
               confiável e atualizada para você. Fundado em 2024, nossa missão é manter nossos leitores 
               bem informados sobre os acontecimentos mais importantes do Brasil e do mundo.
             </p>

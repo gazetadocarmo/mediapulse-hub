@@ -50,7 +50,7 @@ const Login = () => {
     <div className="min-h-screen flex items-center justify-center bg-muted/30">
       <div className="w-full max-w-md p-8 bg-background rounded-lg shadow-lg border border-border">
         <Link to="/" className="text-2xl font-serif font-bold text-center block mb-8">
-          Jornal Digital
+          GAZETA DO CARMO
         </Link>
         <h2 className="text-2xl font-bold mb-6">{isLogin ? "Login" : "Cadastro"}</h2>
         

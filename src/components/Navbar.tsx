@@ -55,7 +55,7 @@ export const Navbar = ({ user }: NavbarProps) => {
         {/* Top Bar */}
         <div className="flex items-center justify-between py-4">
           <Link to="/" className="text-3xl font-serif font-bold text-foreground">
-            Jornal Digital
+            GAZETA DO CARMO
           </Link>
 
           {/* Search and User Actions */}

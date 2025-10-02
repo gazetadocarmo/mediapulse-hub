@@ -10,7 +10,7 @@ export const Footer = () => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* About */}
           <div>
-            <h3 className="text-xl font-serif font-bold mb-4">Jornal Digital</h3>
+            <h3 className="text-xl font-serif font-bold mb-4">GAZETA DO CARMO</h3>
             <p className="text-sm text-background/80">
               Seu portal de notícias confiável com cobertura completa em política, economia, cultura e esportes.
             </p>
@@ -94,7 +94,7 @@ export const Footer = () => {
         </div>
 
         <div className="border-t border-background/20 mt-8 pt-8 text-center text-sm text-background/80">
-          <p>&copy; {currentYear} Jornal Digital. Todos os direitos reservados.</p>
+          <p>&copy; {currentYear} GAZETA DO CARMO. Todos os direitos reservados.</p>
         </div>
       </div>
     </footer>
