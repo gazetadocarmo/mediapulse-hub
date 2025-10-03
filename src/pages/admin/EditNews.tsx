@@ -1,38 +1,82 @@
 import { useState, useEffect } from "react";
-import { useNavigate, useParams } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { useNavigate, useParams, Link } from "react-router-dom";
+import { ArrowLeft, Save } from "lucide-react";
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
+import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { Navbar } from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
-import { useToast } from "@/hooks/use-toast";
-import { Loader2, ArrowLeft, Upload, X } from "lucide-react";
-import { Navbar } from "@/components/Navbar";
-import { z } from "zod";
+import { toast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { ContentBlock, BlockType } from "@/types/contentBlocks";
+import { BlockToolbar } from "@/components/editor/BlockToolbar";
+import { ContentBlockRenderer } from "@/components/editor/ContentBlockRenderer";
+import { ArticlePreview } from "@/components/editor/ArticlePreview";
+import { ArticleSettings } from "@/components/editor/ArticleSettings";
 
-const newsSchema = z.object({
-  title: z.string().trim().min(3, "Título deve ter no mínimo 3 caracteres").max(200, "Título muito longo"),
-  content: z.string().trim().min(50, "Conteúdo deve ter no mínimo 50 caracteres"),
-  category_id: z.string().uuid("Selecione uma categoria"),
-});
+function SortableBlock({ 
+  block, 
+  onUpdate, 
+  onDelete 
+}: { 
+  block: ContentBlock; 
+  onUpdate: (block: ContentBlock) => void; 
+  onDelete: () => void;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+  } = useSortable({ id: block.id });
 
-const EditNews = () => {
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} {...attributes}>
+      <ContentBlockRenderer
+        block={block}
+        onUpdate={onUpdate}
+        onDelete={onDelete}
+        dragHandleProps={listeners}
+      />
+    </div>
+  );
+}
+
+export default function EditNews() {
   const { id } = useParams();
-  const [user, setUser] = useState<any>(null);
-  const [categories, setCategories] = useState<any[]>([]);
-  const [title, setTitle] = useState("");
-  const [content, setContent] = useState("");
-  const [categoryId, setCategoryId] = useState("");
-  const [isFeatured, setIsFeatured] = useState(false);
-  const [currentImageUrl, setCurrentImageUrl] = useState<string | null>(null);
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const navigate = useNavigate();
-  const { toast } = useToast();
+  const [categories, setCategories] = useState<{ id: string; name: string; }[]>([]);
+  
+  const [title, setTitle] = useState("");
+  const [coverImage, setCoverImage] = useState<File | null>(null);
+  const [coverImageUrl, setCoverImageUrl] = useState("");
+  const [categoryId, setCategoryId] = useState("");
+  const [isFeatured, setIsFeatured] = useState(false);
+  const [blocks, setBlocks] = useState<ContentBlock[]>([]);
+  const [authors, setAuthors] = useState<string[]>([]);
+  const [scheduledAt, setScheduledAt] = useState("");
+  const [status, setStatus] = useState("draft");
+  const [seoTitle, setSeoTitle] = useState("");
+  const [seoDescription, setSeoDescription] = useState("");
+  const [seoTags, setSeoTags] = useState<string[]>([]);
+  const [socialImageUrl, setSocialImageUrl] = useState("");
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   useEffect(() => {
     checkAuth();
@@ -56,39 +100,100 @@ const EditNews = () => {
     if (!profile?.is_admin) {
       toast({ title: "Acesso negado", variant: "destructive" });
       navigate("/");
-      return;
     }
-
-    setUser(user);
   };
 
   const fetchCategories = async () => {
     const { data } = await supabase
       .from("categories")
-      .select("*")
+      .select("id, name")
       .order("name");
-    setCategories(data || []);
+    if (data) setCategories(data);
   };
 
   const fetchNews = async () => {
+    if (!id) return;
+    
     const { data, error } = await supabase
       .from("news")
       .select("*")
       .eq("id", id)
       .single();
 
-    if (error || !data) {
-      toast({ title: "Notícia não encontrada", variant: "destructive" });
+    if (error) {
+      toast({ title: "Erro ao carregar notícia", variant: "destructive" });
       navigate("/admin/dashboard");
       return;
     }
 
     setTitle(data.title);
-    setContent(data.content);
+    setCoverImageUrl(data.cover_image_url || "");
     setCategoryId(data.category_id);
     setIsFeatured(data.is_featured);
-    setCurrentImageUrl(data.cover_image_url);
+    setBlocks((data.content_blocks as any as ContentBlock[]) || []);
+    setAuthors((data as any).authors || []);
+    setScheduledAt((data as any).scheduled_at || "");
+    setStatus((data as any).status || "draft");
+    setSeoTitle((data as any).seo_title || "");
+    setSeoDescription((data as any).seo_description || "");
+    setSeoTags((data as any).seo_tags || []);
+    setSocialImageUrl((data as any).social_image_url || "");
     setLoading(false);
+  };
+
+  const addBlock = (type: BlockType) => {
+    const newBlock: ContentBlock = {
+      id: `${Date.now()}`,
+      type,
+      ...(type === 'heading' && { level: 'h1' as const, text: '' }),
+      ...(type === 'subtitle' && { text: '' }),
+      ...(type === 'paragraph' && { text: '' }),
+      ...(type === 'image' && { url: '' }),
+      ...(type === 'video' && { url: '', embedType: 'youtube' as const }),
+      ...(type === 'list' && { items: [''], ordered: false }),
+      ...(type === 'chart' && { imageUrl: '' }),
+      ...(type === 'highlight' && { text: '', variant: 'alert' as const }),
+    };
+    setBlocks([...blocks, newBlock]);
+  };
+
+  const updateBlock = (id: string, updatedBlock: ContentBlock) => {
+    setBlocks(blocks.map(b => b.id === id ? updatedBlock : b));
+  };
+
+  const deleteBlock = (id: string) => {
+    setBlocks(blocks.filter(b => b.id !== id));
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      setBlocks((items) => {
+        const oldIndex = items.findIndex(i => i.id === active.id);
+        const newIndex = items.findIndex(i => i.id === over.id);
+        return arrayMove(items, oldIndex, newIndex);
+      });
+    }
+  };
+
+  const uploadCoverImage = async (): Promise<string | null> => {
+    if (!coverImage) return coverImageUrl;
+
+    const fileExt = coverImage.name.split('.').pop();
+    const fileName = `${Math.random()}.${fileExt}`;
+    const filePath = `news-images/${fileName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('news-images')
+      .upload(filePath, coverImage);
+
+    if (uploadError) throw uploadError;
+
+    const { data: { publicUrl } } = supabase.storage
+      .from('news-images')
+      .getPublicUrl(filePath);
+
+    return publicUrl;
   };
 
   const generateSlug = (text: string) => {
@@ -102,228 +207,162 @@ const EditNews = () => {
       .trim();
   };
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        toast({ title: "Imagem muito grande", description: "Máximo 5MB", variant: "destructive" });
-        return;
-      }
-      setImageFile(file);
-      setImagePreview(URL.createObjectURL(file));
-    }
-  };
-
-  const uploadImage = async () => {
-    if (!imageFile) return currentImageUrl;
-
-    const fileExt = imageFile.name.split(".").pop();
-    const fileName = `${Math.random()}.${fileExt}`;
-    const filePath = `${fileName}`;
-
-    const { error: uploadError } = await supabase.storage
-      .from("news-images")
-      .upload(filePath, imageFile);
-
-    if (uploadError) throw uploadError;
-
-    const { data } = supabase.storage
-      .from("news-images")
-      .getPublicUrl(filePath);
-
-    return data.publicUrl;
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!title || !categoryId) {
+      toast({ title: "Preencha todos os campos obrigatórios", variant: "destructive" });
+      return;
+    }
+
     setSaving(true);
-
     try {
-      // Validação
-      newsSchema.parse({ title, content, category_id: categoryId });
-
-      // Upload da nova imagem se houver
-      const coverImageUrl = await uploadImage();
-
-      // Atualizar notícia
+      const imageUrl = await uploadCoverImage();
       const slug = generateSlug(title);
+
       const { error } = await supabase
         .from("news")
         .update({
           title,
           slug,
-          content,
+          content_blocks: blocks as any,
           category_id: categoryId,
+          cover_image_url: imageUrl,
           is_featured: isFeatured,
-          cover_image_url: coverImageUrl,
-        })
+          authors,
+          scheduled_at: scheduledAt || null,
+          status,
+          seo_title: seoTitle,
+          seo_description: seoDescription,
+          seo_tags: seoTags,
+          social_image_url: socialImageUrl,
+        } as any)
         .eq("id", id);
 
       if (error) throw error;
 
       toast({ title: "Notícia atualizada com sucesso!" });
       navigate("/admin/dashboard");
-    } catch (error: any) {
-      if (error instanceof z.ZodError) {
-        toast({ 
-          title: "Erro de validação", 
-          description: error.issues[0].message, 
-          variant: "destructive" 
-        });
-      } else {
-        toast({ 
-          title: "Erro ao atualizar notícia", 
-          description: error.message, 
-          variant: "destructive" 
-        });
-      }
+    } catch (error) {
+      console.error("Erro ao atualizar notícia:", error);
+      toast({ title: "Erro ao atualizar notícia", variant: "destructive" });
     } finally {
       setSaving(false);
     }
   };
 
-  if (loading || !user) {
+  if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin" />
+        <p>Carregando...</p>
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-muted/30">
-      <Navbar user={user} />
-      <div className="container mx-auto px-4 py-8 max-w-4xl">
-        <Button
-          variant="ghost"
-          onClick={() => navigate("/admin/dashboard")}
-          className="mb-6"
-        >
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Voltar
-        </Button>
+      <Navbar />
+      
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-4">
+            <Link to="/admin/dashboard">
+              <Button variant="ghost" size="icon">
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+            </Link>
+            <h1 className="text-3xl font-bold">Editar Notícia</h1>
+          </div>
+          <Button onClick={handleSubmit} disabled={saving}>
+            <Save className="h-4 w-4 mr-2" />
+            {saving ? "Salvando..." : "Salvar Alterações"}
+          </Button>
+        </div>
 
-        <h1 className="text-3xl font-serif font-bold mb-8">Editar Notícia</h1>
-
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="mb-6 space-y-4">
           <div>
-            <Label htmlFor="title">Título *</Label>
+            <Label>Título da Notícia</Label>
             <Input
-              id="title"
+              placeholder="Digite o título principal..."
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Digite o título da notícia"
-              required
+              className="text-2xl font-bold"
             />
           </div>
-
+          
           <div>
-            <Label htmlFor="category">Categoria *</Label>
-            <Select value={categoryId} onValueChange={setCategoryId} required>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione uma categoria" />
-              </SelectTrigger>
-              <SelectContent>
-                {categories.map((cat) => (
-                  <SelectItem key={cat.id} value={cat.id}>
-                    {cat.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div>
-            <Label htmlFor="image">Imagem de Capa</Label>
-            <div className="mt-2">
-              {imagePreview || currentImageUrl ? (
-                <div className="relative">
-                  <img
-                    src={imagePreview || currentImageUrl || ""}
-                    alt="Preview"
-                    className="w-full h-64 object-cover rounded-lg"
-                  />
-                  <Button
-                    type="button"
-                    variant="destructive"
-                    size="icon"
-                    className="absolute top-2 right-2"
-                    onClick={() => {
-                      setImageFile(null);
-                      setImagePreview(null);
-                      setCurrentImageUrl(null);
-                    }}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-              ) : (
-                <label className="flex flex-col items-center justify-center w-full h-64 border-2 border-dashed rounded-lg cursor-pointer hover:bg-muted/50">
-                  <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                    <Upload className="w-10 h-10 mb-3 text-muted-foreground" />
-                    <p className="mb-2 text-sm text-muted-foreground">
-                      <span className="font-semibold">Clique para fazer upload</span>
-                    </p>
-                    <p className="text-xs text-muted-foreground">PNG, JPG ou WEBP (MAX. 5MB)</p>
-                  </div>
-                  <input
-                    id="image"
-                    type="file"
-                    className="hidden"
-                    accept="image/*"
-                    onChange={handleImageChange}
-                  />
-                </label>
-              )}
-            </div>
-          </div>
-
-          <div>
-            <Label htmlFor="content">Conteúdo *</Label>
-            <Textarea
-              id="content"
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              placeholder="Digite o conteúdo da notícia"
-              rows={12}
-              required
+            <Label>Imagem de Capa</Label>
+            <Input
+              type="file"
+              accept="image/*"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) {
+                  setCoverImage(file);
+                  setCoverImageUrl(URL.createObjectURL(file));
+                }
+              }}
             />
+            {coverImageUrl && (
+              <img src={coverImageUrl} alt="Preview" className="mt-2 max-w-md rounded" />
+            )}
           </div>
+        </div>
 
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="featured"
-              checked={isFeatured}
-              onCheckedChange={(checked) => setIsFeatured(checked as boolean)}
-            />
-            <Label htmlFor="featured" className="cursor-pointer">
-              Notícia em destaque
-            </Label>
-          </div>
-
-          <div className="flex gap-4">
-            <Button type="submit" disabled={saving} className="flex-1">
-              {saving ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Salvando...
-                </>
-              ) : (
-                "Salvar Alterações"
-              )}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => navigate("/admin/dashboard")}
+        <div className="flex gap-4">
+          <BlockToolbar onAddBlock={addBlock} />
+          
+          <div className="flex-1 space-y-4">
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleDragEnd}
             >
-              Cancelar
-            </Button>
+              <SortableContext items={blocks.map(b => b.id)} strategy={verticalListSortingStrategy}>
+                {blocks.map((block) => (
+                  <SortableBlock
+                    key={block.id}
+                    block={block}
+                    onUpdate={(updated) => updateBlock(block.id, updated)}
+                    onDelete={() => deleteBlock(block.id)}
+                  />
+                ))}
+              </SortableContext>
+            </DndContext>
+
+            {blocks.length === 0 && (
+              <div className="text-center py-12 text-muted-foreground">
+                <p>Nenhum bloco adicionado ainda.</p>
+                <p className="text-sm">Use a barra lateral para adicionar conteúdo.</p>
+              </div>
+            )}
+
+            <ArticlePreview title={title} coverImage={coverImageUrl} blocks={blocks} />
           </div>
-        </form>
+
+          <ArticleSettings
+            categoryId={categoryId}
+            onCategoryChange={setCategoryId}
+            authors={authors}
+            onAuthorsChange={setAuthors}
+            scheduledAt={scheduledAt}
+            onScheduledAtChange={setScheduledAt}
+            status={status}
+            onStatusChange={setStatus}
+            seoTitle={seoTitle}
+            onSeoTitleChange={setSeoTitle}
+            seoDescription={seoDescription}
+            onSeoDescriptionChange={setSeoDescription}
+            seoTags={seoTags}
+            onSeoTagsChange={setSeoTags}
+            socialImageUrl={socialImageUrl}
+            onSocialImageChange={setSocialImageUrl}
+            isFeatured={isFeatured}
+            onFeaturedChange={setIsFeatured}
+            categories={categories}
+          />
+        </div>
       </div>
     </div>
   );
-};
-
-export default EditNews;
+}
