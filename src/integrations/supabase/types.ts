@@ -38,40 +38,64 @@ export type Database = {
       news: {
         Row: {
           author_id: string
+          authors: string[] | null
           category_id: string
           content: string
+          content_blocks: Json | null
           cover_image_url: string | null
           created_at: string
           id: string
           is_featured: boolean
           published_at: string
+          scheduled_at: string | null
+          seo_description: string | null
+          seo_tags: string[] | null
+          seo_title: string | null
           slug: string
+          social_image_url: string | null
+          status: string | null
           title: string
           updated_at: string
         }
         Insert: {
           author_id: string
+          authors?: string[] | null
           category_id: string
           content: string
+          content_blocks?: Json | null
           cover_image_url?: string | null
           created_at?: string
           id?: string
           is_featured?: boolean
           published_at?: string
+          scheduled_at?: string | null
+          seo_description?: string | null
+          seo_tags?: string[] | null
+          seo_title?: string | null
           slug: string
+          social_image_url?: string | null
+          status?: string | null
           title: string
           updated_at?: string
         }
         Update: {
           author_id?: string
+          authors?: string[] | null
           category_id?: string
           content?: string
+          content_blocks?: Json | null
           cover_image_url?: string | null
           created_at?: string
           id?: string
           is_featured?: boolean
           published_at?: string
+          scheduled_at?: string | null
+          seo_description?: string | null
+          seo_tags?: string[] | null
+          seo_title?: string | null
           slug?: string
+          social_image_url?: string | null
+          status?: string | null
           title?: string
           updated_at?: string
         }
