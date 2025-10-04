@@ -52,9 +52,15 @@ export function ArticlePreview({ title, coverImage, blocks }: ArticlePreviewProp
             case 'list':
               const ListTag = block.ordered ? 'ol' : 'ul';
               return (
-                <ListTag key={block.id} className="my-4 ml-6">
+                <ListTag key={block.id} className={`my-4 ml-6 ${block.ordered ? 'list-decimal' : 'list-disc'}`}>
                   {block.items.map((item, idx) => (
-                    <li key={idx} className="mb-2">{item}</li>
+                    <li key={idx} className="mb-2">
+                      {item.link ? (
+                        <span className="text-primary">{item.text}</span>
+                      ) : (
+                        item.text
+                      )}
+                    </li>
                   ))}
                 </ListTag>
               );

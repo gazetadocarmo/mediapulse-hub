@@ -150,7 +150,7 @@ export default function EditNews() {
       ...(type === 'paragraph' && { text: '' }),
       ...(type === 'image' && { url: '' }),
       ...(type === 'video' && { url: '', embedType: 'youtube' as const }),
-      ...(type === 'list' && { items: [''], ordered: false }),
+      ...(type === 'list' && { items: [{ text: '', link: '' }], ordered: false }),
       ...(type === 'chart' && { imageUrl: '' }),
       ...(type === 'highlight' && { text: '', variant: 'alert' as const }),
     };

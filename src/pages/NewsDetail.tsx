@@ -167,9 +167,17 @@ const NewsDetail = () => {
                   case 'list':
                     const ListTag = block.ordered ? 'ol' : 'ul';
                     return (
-                      <ListTag key={block.id} className="my-6 ml-6">
+                      <ListTag key={block.id} className={`my-6 ml-6 ${block.ordered ? 'list-decimal' : 'list-disc'}`}>
                         {block.items.map((item, idx) => (
-                          <li key={idx} className="mb-2 text-foreground">{item}</li>
+                          <li key={idx} className="mb-2 text-foreground">
+                            {item.link ? (
+                              <a href={item.link} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                                {item.text}
+                              </a>
+                            ) : (
+                              item.text
+                            )}
+                          </li>
                         ))}
                       </ListTag>
                     );

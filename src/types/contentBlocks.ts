@@ -46,9 +46,14 @@ export interface VideoBlock extends BaseBlock {
   embedType?: 'youtube' | 'vimeo' | 'upload';
 }
 
+export interface ListItem {
+  text: string;
+  link?: string;
+}
+
 export interface ListBlock extends BaseBlock {
   type: 'list';
-  items: string[];
+  items: ListItem[];
   ordered: boolean;
 }
 

@@ -165,21 +165,31 @@ export function ContentBlockRenderer({
                 </SelectContent>
               </Select>
               {block.items.map((item, idx) => (
-                <Input
-                  key={idx}
-                  placeholder={`Item ${idx + 1}...`}
-                  value={item}
-                  onChange={(e) => {
-                    const newItems = [...block.items];
-                    newItems[idx] = e.target.value;
-                    onUpdate({ ...block, items: newItems });
-                  }}
-                />
+                <div key={idx} className="space-y-1">
+                  <Input
+                    placeholder="Texto do item"
+                    value={item.text}
+                    onChange={(e) => {
+                      const newItems = [...block.items];
+                      newItems[idx] = { ...newItems[idx], text: e.target.value };
+                      onUpdate({ ...block, items: newItems });
+                    }}
+                  />
+                  <Input
+                    placeholder="Link (opcional)"
+                    value={item.link || ''}
+                    onChange={(e) => {
+                      const newItems = [...block.items];
+                      newItems[idx] = { ...newItems[idx], link: e.target.value };
+                      onUpdate({ ...block, items: newItems });
+                    }}
+                  />
+                </div>
               ))}
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => onUpdate({ ...block, items: [...block.items, ''] })}
+                onClick={() => onUpdate({ ...block, items: [...block.items, { text: '', link: '' }] })}
               >
                 + Adicionar item
               </Button>
