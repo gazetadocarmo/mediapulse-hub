@@ -7,6 +7,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Clock, User, ArrowLeft, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ContentBlock } from "@/types/contentBlocks";
 
 interface NewsDetail {
   id: string;
@@ -17,6 +18,7 @@ interface NewsDetail {
   published_at: string;
   cover_image_url?: string;
   content: string;
+  content_blocks?: ContentBlock[];
 }
 
 const NewsDetail = () => {
@@ -127,11 +129,84 @@ const NewsDetail = () => {
           )}
 
           <div className="prose prose-lg max-w-none">
-            {news.content.split('\n').map((paragraph, index) => (
-              <p key={index} className="mb-4 text-foreground leading-relaxed">
-                {paragraph}
-              </p>
-            ))}
+            {news.content_blocks && news.content_blocks.length > 0 ? (
+              news.content_blocks.map((block) => {
+                switch (block.type) {
+                  case 'heading':
+                    const HeadingTag = block.level;
+                    return <HeadingTag key={block.id} className="font-serif font-bold mt-8 mb-4">{block.text}</HeadingTag>;
+                  
+                  case 'subtitle':
+                    return <h4 key={block.id} className="text-xl text-muted-foreground mb-4">{block.text}</h4>;
+                  
+                  case 'paragraph':
+                    return <p key={block.id} className="mb-4 leading-relaxed text-foreground">{block.text}</p>;
+                  
+                  case 'image':
+                    return (
+                      <figure key={block.id} className="my-8">
+                        <img src={block.url} alt={block.caption || ''} className="w-full h-auto rounded-lg" />
+                        {block.caption && <figcaption className="text-sm text-muted-foreground mt-2">{block.caption}</figcaption>}
+                        {block.credit && <figcaption className="text-xs text-muted-foreground">{block.credit}</figcaption>}
+                      </figure>
+                    );
+                  
+                  case 'video':
+                    return (
+                      <div key={block.id} className="my-8 aspect-video">
+                        {block.embedType === 'youtube' && block.url && (
+                          <iframe
+                            className="w-full h-full rounded-lg"
+                            src={block.url.replace('watch?v=', 'embed/')}
+                            allowFullScreen
+                          />
+                        )}
+                      </div>
+                    );
+                  
+                  case 'list':
+                    const ListTag = block.ordered ? 'ol' : 'ul';
+                    return (
+                      <ListTag key={block.id} className="my-6 ml-6">
+                        {block.items.map((item, idx) => (
+                          <li key={idx} className="mb-2 text-foreground">{item}</li>
+                        ))}
+                      </ListTag>
+                    );
+                  
+                  case 'chart':
+                    return (
+                      <figure key={block.id} className="my-8">
+                        {block.imageUrl && <img src={block.imageUrl} alt="Gráfico" className="w-full h-auto rounded-lg" />}
+                      </figure>
+                    );
+                  
+                  case 'highlight':
+                    return (
+                      <div
+                        key={block.id}
+                        className={`my-8 p-6 rounded-lg border-l-4 ${
+                          block.variant === 'alert'
+                            ? 'bg-yellow-50 dark:bg-yellow-950/20 border-yellow-500'
+                            : 'bg-blue-50 dark:bg-blue-950/20 border-blue-500'
+                        }`}
+                      >
+                        <p className="text-foreground">{block.text}</p>
+                      </div>
+                    );
+                  
+                  default:
+                    return null;
+                }
+              })
+            ) : (
+              // Fallback para conteúdo antigo
+              news.content.split('\n').map((paragraph, index) => (
+                <p key={index} className="mb-4 text-foreground leading-relaxed">
+                  {paragraph}
+                </p>
+              ))
+            )}
           </div>
         </article>
       </main>
