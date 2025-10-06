@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/card";
 import { ContentBlock } from "@/types/contentBlocks";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { RichTextEditor } from "./RichTextEditor";
 
 interface ContentBlockRendererProps {
   block: ContentBlock;
@@ -98,11 +99,10 @@ export function ContentBlockRenderer({
           )}
 
           {block.type === 'paragraph' && (
-            <Textarea
+            <RichTextEditor
+              content={block.text}
+              onChange={(html) => onUpdate({ ...block, text: html })}
               placeholder="Digite o texto do parágrafo..."
-              value={block.text}
-              onChange={(e) => onUpdate({ ...block, text: e.target.value })}
-              className="min-h-[120px]"
             />
           )}
 

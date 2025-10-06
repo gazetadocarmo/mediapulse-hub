@@ -140,7 +140,13 @@ const NewsDetail = () => {
                     return <h4 key={block.id} className="text-xl text-muted-foreground mb-4">{block.text}</h4>;
                   
                   case 'paragraph':
-                    return <p key={block.id} className="mb-4 leading-relaxed text-foreground">{block.text}</p>;
+                    return (
+                      <div 
+                        key={block.id} 
+                        className="mb-4 leading-relaxed text-foreground prose prose-lg max-w-none"
+                        dangerouslySetInnerHTML={{ __html: block.text }}
+                      />
+                    );
                   
                   case 'image':
                     return (
